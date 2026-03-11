@@ -26,6 +26,13 @@
       background: #1a5276;
     }
 
+    /* Clips anything outside viewport — hides GAS banner above */
+    #frame-wrapper {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
+
     /* Splash screen shown while iframe loads */
     #splash {
       position: fixed;
@@ -72,16 +79,14 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* The app iframe — fills entire viewport */
+    /* The app iframe — pushed up exactly the GAS banner height */
     #app-frame {
-      position: fixed;
-      inset: 0;
+      position: absolute;
+      top: -40px;
+      left: 0;
       width: 100%;
-      height: 100%;
+      height: calc(100% + 40px);
       border: none;
-      /* Push it up enough to hide the ~40px GAS banner */
-      top: -52px;
-      height: calc(100% + 52px);
     }
   </style>
 </head>
@@ -96,12 +101,14 @@
   </div>
 
   <!-- App iframe -->
+  <div id="frame-wrapper">
   <iframe
     id="app-frame"
     src="https://script.google.com/macros/s/AKfycby4FymWf-e1EYy0TD9VB9IWKHC-EXe8f87w0Wv70y41KiyHSr4oT-6d17VNREvvI8g2pA/exec"
     allow="clipboard-read; clipboard-write"
     sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation"
   ></iframe>
+  </div>
 
   <script>
     // Register service worker for PWA installability
