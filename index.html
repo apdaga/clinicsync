@@ -120,13 +120,6 @@
     });
 
     setTimeout(hideSplash, 10000);
-
-    // Listen for exit request from GAS app inside iframe
-    window.addEventListener("message", function(e) {
-      if (e.data && e.data.action === "close_app") {
-        window.close();
-      }
-    });
   </script>
 
 </body>
