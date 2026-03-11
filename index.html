@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
   <!-- Open Graph — WhatsApp / Facebook / Twitter preview card -->
-  <meta property="og:title"       content="ClinicSync — Clinical Patient Management on the go" />
+  <meta property="og:title"       content="ClinicSync — Clinic Management on the go" />
   <meta property="og:description" content="Manage patients, registrations, follow-ups, appointments, transactions with detailed analytics on fingertips — anywhere, anytime." />
   <meta property="og:image"       content="https://apdaga.github.io/ClinicSync/icons/icon-512.png" />
   <meta property="og:image:width"  content="512" />
@@ -120,6 +120,13 @@
     });
 
     setTimeout(hideSplash, 10000);
+
+    // Listen for exit request from GAS app inside iframe
+    window.addEventListener("message", function(e) {
+      if (e.data && e.data.action === "close_app") {
+        window.close();
+      }
+    });
   </script>
 
 </body>
