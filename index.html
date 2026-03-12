@@ -103,11 +103,11 @@
     <div class="spinner"></div>
   </div>
 
-  <!-- Offline screen — shown when GAS iframe fails to load -->
+  <!-- Offline screen — lives in PWA shell (outside iframe) so it works even when GAS can't load -->
   <div id="offline-screen" style="display:none;position:fixed;inset:0;z-index:200;
     background:#f0f4f8;flex-direction:column;align-items:center;justify-content:center;
     text-align:center;padding:32px;gap:16px;font-family:Arial,sans-serif">
-    <div style="font-size:64px;line-height:1">📡</div>
+    <div style="font-size:64px;line-height:1">&#128225;</div>
     <h2 style="margin:0;font-size:20px;color:#1a5276;font-weight:700">No Internet Connection</h2>
     <p style="margin:0;color:#5d6d7e;font-size:14px;line-height:1.7;max-width:280px">
       ClinicSync needs an internet connection to reach the server.<br>
@@ -115,13 +115,17 @@
     </p>
     <button id="retry-btn" onclick="retryLoad()"
       style="margin-top:8px;padding:13px 32px;background:#1a5276;color:white;border:none;
-      border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;
-      display:flex;align-items:center;gap:10px;letter-spacing:0.3px">
+      border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.3px">
       &#8635; Retry
     </button>
-    <p id="offline-status" style="margin:0;font-size:12px;color:#999">
-      Waiting for connection…
-    </p>
+    <p id="offline-status" style="margin:0;font-size:12px;color:#999">Waiting for connection&#8230;</p>
+  </div>
+
+  <!-- Offline banner — lives in PWA shell so visualViewport works correctly above keyboard -->
+  <div id="offline-banner" style="display:none;position:fixed;left:0;right:0;z-index:300;
+    background:#e74c3c;color:white;text-align:center;padding:10px 16px;font-size:13px;
+    font-weight:600;align-items:center;justify-content:center;gap:8px;font-family:Arial,sans-serif">
+    &#128246; No internet connection &#8212; changes may not be saved
   </div>
 
   <script>
@@ -129,11 +133,11 @@
       navigator.serviceWorker.register('sw.js').catch(function() {});
     }
 
-    var gone    = false;
+    var gone         = false;
     var offlineShown = false;
-    var LOAD_TIMEOUT = 10000; // show offline screen if iframe hasn't loaded in 10s
-    var loadTimer = null;
+    var GAS_URL      = document.getElementById('app-frame').src;
 
+    // ── Splash ────────────────────────────────────────────────────────────────
     function hideSplash() {
       if (gone) return; gone = true;
       var s = document.getElementById('splash');
@@ -141,76 +145,135 @@
       setTimeout(function() { s.style.display = 'none'; }, 550);
     }
 
-    function showOffline() {
+    // ── Offline screen ────────────────────────────────────────────────────────
+    function showOffline(msg) {
       if (offlineShown) return;
       offlineShown = true;
       hideSplash();
+      var st = document.getElementById('offline-status');
+      if (st && msg) st.textContent = msg;
       document.getElementById('offline-screen').style.display = 'flex';
     }
-
     function hideOffline() {
       offlineShown = false;
       document.getElementById('offline-screen').style.display = 'none';
     }
 
-    function retryLoad() {
-      var st  = document.getElementById('offline-status');
-      var btn = document.getElementById('retry-btn');
-      st.textContent  = 'Connecting…';
-      btn.disabled    = true;
-      btn.textContent = '⏳ Connecting…';
-
-      hideOffline();
-      // Reload the iframe by re-setting its src
-      var frame = document.getElementById('app-frame');
-      var src   = frame.src;
-      frame.src = '';
-      setTimeout(function() {
-        frame.src = src;
-        gone = false; // allow splash to show again briefly
-        document.getElementById('splash').style.display = 'flex';
-        document.getElementById('splash').style.opacity = '1';
-        document.getElementById('splash').classList.remove('fade-out');
-        // Reset timeout
-        clearTimeout(loadTimer);
-        loadTimer = setTimeout(function() {
-          btn.disabled    = false;
-          btn.innerHTML   = '&#8635; Retry';
-          st.textContent  = "Still can't reach the server. Check your connection.";
-          showOffline();
-        }, LOAD_TIMEOUT);
-      }, 100);
+    // ── Offline banner (above keyboard) ───────────────────────────────────────
+    function showBanner() {
+      var b = document.getElementById('offline-banner');
+      b.style.display = 'flex';
+      adjustBanner();
+    }
+    function hideBanner() {
+      document.getElementById('offline-banner').style.display = 'none';
+    }
+    function adjustBanner() {
+      var b = document.getElementById('offline-banner');
+      if (!b || b.style.display === 'none') return;
+      if (window.visualViewport) {
+        // keyboard height = full window height minus visible viewport height minus any scroll offset
+        var kbHeight = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+        b.style.bottom = Math.max(0, Math.round(kbHeight)) + 'px';
+      } else {
+        b.style.bottom = '0px';
+      }
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', adjustBanner);
+      window.visualViewport.addEventListener('scroll', adjustBanner);
     }
 
-    // Iframe loaded successfully
+    // ── postMessage bridge — GAS iframe signals online/offline state ──────────
+    window.addEventListener('message', function(e) {
+      // Only accept messages from the GAS domain
+      if (!e.origin || e.origin.indexOf('script.google.com') === -1) return;
+      if (!e.data || !e.data.type) return;
+      if (e.data.type === 'cs_offline') showBanner();
+      if (e.data.type === 'cs_online')  hideBanner();
+    });
+
+    // ── Connectivity check — fetch with timeout, resolves true/false ──────────
+    function checkConnectivity(timeoutMs) {
+      timeoutMs = timeoutMs || 8000;
+      return new Promise(function(resolve) {
+        var done = false;
+        var timer = setTimeout(function() {
+          if (!done) { done = true; resolve(false); }
+        }, timeoutMs);
+        // Ping Google's generate_204 endpoint — tiny, reliable, no CORS issues
+        fetch('https://connectivitycheck.gstatic.com/generate_204', {
+          method: 'HEAD', mode: 'no-cors', cache: 'no-store'
+        })
+        .then(function() { if (!done) { done = true; clearTimeout(timer); resolve(true); } })
+        .catch(function() { if (!done) { done = true; clearTimeout(timer); resolve(false); } });
+      });
+    }
+
+    // ── Retry button ──────────────────────────────────────────────────────────
+    window.retryLoad = function() {
+      var btn = document.getElementById('retry-btn');
+      var st  = document.getElementById('offline-status');
+      btn.disabled   = true;
+      btn.textContent = 'Checking…';
+      st.textContent  = 'Checking connection…';
+
+      checkConnectivity(6000).then(function(online) {
+        if (online) {
+          hideOffline();
+          // Show splash and reload iframe
+          gone = false;
+          var splash = document.getElementById('splash');
+          splash.style.display   = 'flex';
+          splash.style.opacity   = '1';
+          splash.classList.remove('fade-out');
+          var frame = document.getElementById('app-frame');
+          frame.src = '';
+          setTimeout(function() { frame.src = GAS_URL; }, 150);
+          // Re-arm timeout in case load event fires for error page again
+          setTimeout(function() {
+            btn.disabled    = false;
+            btn.textContent = '↺ Retry';
+          }, 2000);
+        } else {
+          btn.disabled    = false;
+          btn.textContent = '↺ Retry';
+          st.textContent  = "Still can't reach the server. Check your connection.";
+        }
+      });
+    };
+
+    // ── Startup: check connectivity FIRST, then load iframe ──────────────────
+    // Do NOT rely on iframe load/error events — Android fires load even on error pages.
+    // Instead: probe connectivity, show offline immediately if unreachable.
+    checkConnectivity(8000).then(function(online) {
+      if (!online) {
+        showOffline('No internet connection.');
+      } else {
+        // Connectivity confirmed — iframe is already loading in background
+        // hideSplash when iframe load event fires
+      }
+    });
+
+    // Iframe load event — fires on both success AND Android error pages
+    // Only hide splash if we are NOT in offline state
     document.getElementById('app-frame').addEventListener('load', function() {
-      clearTimeout(loadTimer);
       if (!offlineShown) {
         setTimeout(hideSplash, 700);
       }
     });
 
-    // Iframe load error (net::ERR_NAME_NOT_RESOLVED etc.)
-    document.getElementById('app-frame').addEventListener('error', function() {
-      clearTimeout(loadTimer);
-      showOffline();
-    });
-
-    // Timeout fallback — iframe load event may not fire on Android network error
-    loadTimer = setTimeout(function() {
-      showOffline();
-    }, LOAD_TIMEOUT);
-
-    // Auto-retry when device comes back online
+    // Auto-retry when browser detects online event (secondary signal)
     window.addEventListener('online', function() {
-      var st = document.getElementById('offline-status');
       if (offlineShown) {
-        st.textContent = 'Connection detected — retrying…';
-        setTimeout(retryLoad, 1000);
+        document.getElementById('offline-status').textContent = 'Connection detected — retrying…';
+        setTimeout(retryLoad, 800);
       }
     });
 
   </script>
+
+
 
 </body>
 </html>
