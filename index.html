@@ -240,9 +240,13 @@
           splash.classList.remove('fade-out');
           // Reload iframe
           var frame = document.getElementById('app-frame');
-          frame.style.visibility = 'hidden'; // keep hidden until load fires
+          frame.style.visibility = 'hidden';
           frame.src = '';
-          setTimeout(function() { frame.src = GAS_URL; }, 150);
+          setTimeout(function() {
+            frame.src = GAS_URL;
+            iframeReady = true;           // ← was missing — load event checks this
+            frame.style.visibility = 'visible';
+          }, 150);
         } else {
           st.textContent = "Still can't reach server. Check your connection.";
         }
