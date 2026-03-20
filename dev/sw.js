@@ -1,7 +1,7 @@
 // ClinicSync Service Worker v1.0
 // Enables PWA installability — minimal caching (app lives on GAS server)
 
-const CACHE_NAME = 'clinicsync-v1';
+const CACHE_NAME = 'clinicsync-dev-v1';
 const SHELL_FILES = [
   './',
   './index.html',
