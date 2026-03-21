@@ -2,14 +2,15 @@
 // Enables PWA installability — minimal caching (app lives on GAS server)
 //
 // ── IMPORTANT: Update CACHE_NAME for each environment ─────────────────────
-//    Format: csync-<env>-v<version>
+//    Format: csync-<client-slug>-<env>-v<version>
+//    The Setup Wizard generates the exact value for you (Step 6 result).
 //    Examples:
-//      DEV          → csync-dev-v1
-//      QA           → csync-qa-v1
-//      Demo         → csync-demo-v1
-//      Mann Clinic  → csync-mann-v1
-//    Change the version number (v1 → v2) whenever you update PWA shell files
-//    so browsers pick up the new version and discard the old cache.
+//      DEV                    → csync-dev-v1
+//      QA                     → csync-qa-v1
+//      Mann Clinic  PROD      → csync-mann-clinic-prod-v1
+//      Sunshine Hospital PROD → csync-sunshine-hospital-prod-v1
+//    Bump version (v1 → v2) whenever you update PWA shell files
+//    so all browsers pick up the new version and discard the old cache.
 // ──────────────────────────────────────────────────────────────────────────
 const CACHE_NAME = 'csync-dev-v1';   // ← change per environment
 
