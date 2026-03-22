@@ -233,19 +233,23 @@
 
   <script>
     // ── Environment config ─────────────────────────────────────────────────────
-    // ► Change ENV per environment: DEV | QA | PreProd | PROD
-    var ENV = 'DEV';
+    // ► FALLBACK ENV — only used on very first load before any login
+    // After first login, ENV is read from localStorage (set by the GAS app)
+    // so you only need to set ENV in config.html (GAS) — not here
+    var ENV_FALLBACK = 'DEV';   // ← change this per environment folder: DEV | QA | PreProd | PROD
 
     // Derive storage prefix — same algorithm as script.html _ENV_PREFIX
     // so we read the same localStorage keys the GAS app writes
     var _SCRIPT_URL  = document.getElementById('app-frame').src;
     var _ENV_PREFIX  = 'csync_' + _SCRIPT_URL.replace(/[^a-zA-Z0-9]/g,'').slice(-8) + '_';
 
-    // ── Splash: populate clinic name + tagline from localStorage cache ─────────
-    // Falls back to 'ClinicSync' if no cache yet (first ever load)
+    // ── Splash: populate clinic name, tagline, ENV from localStorage cache ─────
+    // Falls back to defaults on very first load before any login
     (function() {
       var clinicName    = localStorage.getItem(_ENV_PREFIX + 'clinic_name')    || 'ClinicSync';
       var clinicTagline = localStorage.getItem(_ENV_PREFIX + 'clinic_tagline') || '';
+      var ENV           = localStorage.getItem(_ENV_PREFIX + 'env')            || ENV_FALLBACK;
+
       document.getElementById('splash-clinic-name').textContent    = clinicName;
       document.getElementById('splash-clinic-tagline').textContent = clinicTagline;
 
