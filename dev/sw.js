@@ -1,18 +1,22 @@
 // ClinicSync Service Worker
 // Enables PWA installability — minimal caching (app lives on GAS server)
 //
-// ── IMPORTANT: Update CACHE_NAME for each environment ─────────────────────
+// ── IMPORTANT: CACHE_NAME is now driven by pwa-config.js ──────────────────
+//    Do NOT hardcode CACHE_NAME here. Edit pwa-config.js instead.
 //    Format: csync-<client-slug>-<env>-v<version>
-//    The Setup Wizard generates the exact value for you (Step 6 result).
 //    Examples:
 //      DEV                    → csync-dev-v1
 //      QA                     → csync-qa-v1
 //      Mann Clinic  PROD      → csync-mann-clinic-prod-v1
 //      Sunshine Hospital PROD → csync-sunshine-hospital-prod-v1
-//    Bump version (v1 → v2) whenever you update PWA shell files
-//    so all browsers pick up the new version and discard the old cache.
+//    Bump version (v1 → v2) in pwa-config.js whenever you update PWA shell
+//    files so all browsers pick up the new version and discard the old cache.
 // ──────────────────────────────────────────────────────────────────────────
-const CACHE_NAME = 'csync-dev-v1';   // ← change per environment
+
+// Load environment config — must be first
+importScripts('pwa-config.js');
+
+const CACHE_NAME = CLINICSYNC_CONFIG.CACHE_NAME;   // ← set in pwa-config.js
 
 const SHELL_FILES = [
   './',
