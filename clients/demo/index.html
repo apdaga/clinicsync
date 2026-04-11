@@ -1,1 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ClinicSync</title>
 
+  <!-- ► Load environment config FIRST — all other scripts depend on it -->
+  <script src="pwa-config.js"></script>
+
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a5276" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ClinicSync" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <!-- Open Graph -->
+  <meta property="og:title"        content="ClinicSync — Clinic Management on the go" />
+  <meta property="og:description"  content="Manage patients, registrations, follow-ups, appointments, transactions with detailed analytics on fingertips — anywhere, anytime." />
+  <meta property="og:image"        content="https://apdaga.github.io/clinicsync/icons/icon-512.png" />
+  <meta property="og:image:width"  content="512" />
+  <meta property="og:image:height" content="512" />
+  <meta property="og:url"         content="https://apdaga.github.io/clinicsync/" />
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="ClinicSync" />
+
+  <!-- Twitter card -->
+  <meta name="twitter:card"        content="summary" />
+  <meta name="twitter:title"       content="ClinicSync — Clinic Management on the go" />
+  <meta name="twitter:description" content="Manage patients, follow-ups, appointments and analytics — anywhere, anytime." />
+  <meta name="twitter:image"       content="https://apdaga.github.io/clinicsync/icons/icon-512.png" />
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #1a5276;
+    }
+
+    #app-frame {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    /* ── Splash ─────────────────────────────────────────────── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(160deg, #1a3a5c 0%, #1a5276 55%, #0e6655 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity 0.5s ease;
+      padding: 32px 24px;
+    }
+    #splash.fade-out { opacity: 0; pointer-events: none; }
+
+    /* ENV badge — top left, non-PROD only */
+    #splash-env-badge {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      display: none; /* shown by JS for non-PROD */
+    }
+    #splash-env-badge.dev     { background: #e8f5e9; color: #2e7d32; }
+    #splash-env-badge.qa      { background: #fff3e0; color: #e65100; }
+    #splash-env-badge.preprod { background: #fce4ec; color: #c62828; }
+
+    /* Clinic branding — center */
+    .splash-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      justify-content: center;
+      gap: 0;
+    }
+
+    #splash img {
+      width: 88px; height: 88px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    #splash-clinic-name {
+      color: #ffffff;
+      font-size: 26px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+      min-height: 32px;
+    }
+
+    #splash-clinic-tagline {
+      color: rgba(255,255,255,0.65);
+      font-size: 13px;
+      font-family: Arial, sans-serif;
+      font-weight: 400;
+      text-align: center;
+      margin-top: 6px;
+      min-height: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    /* Spinner */
+    .spinner {
+      margin-top: 40px;
+      width: 32px; height: 32px;
+      border: 2.5px solid rgba(255,255,255,0.15);
+      border-top-color: #17a589;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Powered by ClinicSync — bottom */
+    .splash-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding-bottom: 8px;
+    }
+    .splash-powered {
+      color: rgba(255,255,255,0.35);
+      font-size: 10px;
+      font-family: Arial, sans-serif;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .splash-brand {
+      color: rgba(255,255,255,0.75);
+      font-size: 15px;
+      font-family: Georgia, 'Times New Roman', serif;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .splash-brand-tagline {
+      color: #17a589;
+      font-size: 11px;
+      font-family: Arial, sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      margin-top: 1px;
+    }
+
+    /* ── Offline screen ───────────────────────────────────────── */
+    #offline-screen {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: #f0f4f8;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 32px; gap: 16px;
+      font-family: Arial, sans-serif;
+    }
+    #offline-banner {
+      display: none;
+      position: fixed; left: 0; right: 0; z-index: 300;
+      background: #e74c3c; color: white;
+      text-align: center; padding: 10px 16px;
+      font-size: 13px; font-weight: 600;
+      align-items: center; justify-content: center;
+      gap: 8px; font-family: Arial, sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- src is intentionally blank — set by JS from pwa-config.js below -->
+  <iframe id="app-frame"
+    src=""
+    allow="clipboard-read; clipboard-write"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+    style="visibility:hidden"
+  ></iframe>
+
+  <!-- Splash screen -->
+  <div id="splash">
+
+    <!-- ENV badge — top left, shown only for non-PROD by JS -->
+    <div id="splash-env-badge"></div>
+
+    <!-- Clinic branding — center -->
+    <div class="splash-center">
+      <img src="icons/icon-192.png" alt="ClinicSync" />
+      <div id="splash-clinic-name">ClinicSync</div>
+      <div id="splash-clinic-tagline"></div>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- ClinicSync branding — bottom -->
+    <div class="splash-footer">
+      <span class="splash-powered">Powered by</span>
+      <span class="splash-brand">ClinicSync</span>
+      <span class="splash-brand-tagline">Clinic Management on the go</span>
+    </div>
+
+  </div>
+
+  <!-- Offline screen -->
+  <div id="offline-screen">
+    <div style="font-size:64px;line-height:1">&#128225;</div>
+    <h2 style="margin:0;font-size:20px;color:#1a5276;font-weight:700">No Internet Connection</h2>
+    <p style="margin:0;color:#5d6d7e;font-size:14px;line-height:1.7;max-width:280px">
+      ClinicSync needs an internet connection to reach the server.<br>
+      Please check your Wi-Fi or mobile data and try again.
+    </p>
+    <button id="retry-btn" onclick="retryLoad()"
+      style="margin-top:8px;padding:13px 32px;background:#1a5276;color:white;border:none;
+      border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:0.3px">
+      &#8635; Retry
+    </button>
+    <p id="offline-status" style="margin:0;font-size:12px;color:#999">Waiting for connection&#8230;</p>
+  </div>
+
+  <!-- Offline banner -->
+  <div id="offline-banner">
+    &#128246; No internet connection &#8212; changes may not be saved
+  </div>
+
+  <script>
+    // ── Environment config ─────────────────────────────────────────────────────
+    // All values come from pwa-config.js (loaded in <head>).
+    // Do NOT hardcode SCRIPT_URL, ENV, or CACHE_NAME anywhere in this file.
+
+    // Set iframe src from config (iframe src is blank in HTML to avoid hardcoding)
+    document.getElementById('app-frame').src = CLINICSYNC_CONFIG.SCRIPT_URL;
+
+    // ENV_FALLBACK — used on very first load before any login.
+    // After first login, ENV is read from localStorage (set by the GAS app).
+    var ENV_FALLBACK = CLINICSYNC_CONFIG.ENV;
+
+    // Derive storage prefix — same algorithm as script.html _ENV_PREFIX
+    // so we read the same localStorage keys the GAS app writes
+    var _SCRIPT_URL  = CLINICSYNC_CONFIG.SCRIPT_URL;
+    var _ENV_PREFIX  = 'csync_' + _SCRIPT_URL.replace(/[^a-zA-Z0-9]/g,'').slice(-8) + '_';
+
+    // ── Splash: populate clinic name, tagline, ENV from localStorage cache ─────
+    // Falls back to defaults on very first load before any login
+    (function() {
+      var clinicName    = localStorage.getItem(_ENV_PREFIX + 'clinic_name')    || 'ClinicSync';
+      var clinicTagline = localStorage.getItem(_ENV_PREFIX + 'clinic_tagline') || '';
+      var ENV           = localStorage.getItem(_ENV_PREFIX + 'env')            || ENV_FALLBACK;
+
+      document.getElementById('splash-clinic-name').textContent    = clinicName;
+      document.getElementById('splash-clinic-tagline').textContent = clinicTagline;
+
+      // Show ENV badge for non-PROD environments
+      if (ENV && ENV !== 'PROD') {
+        var badge = document.getElementById('splash-env-badge');
+        badge.textContent = ENV;
+        badge.className   = ENV.toLowerCase();
+        badge.style.display = 'block';
+      }
+    })();
+
+    // ── Service worker ─────────────────────────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function() {});
+    }
+
+    var gone         = false;
+    var offlineShown = false;
+    var iframeReady  = false;
+    var GAS_URL      = CLINICSYNC_CONFIG.SCRIPT_URL;
+
+    // ── Splash ─────────────────────────────────────────────────────────────────
+    function hideSplash() {
+      if (gone) return; gone = true;
+      var s = document.getElementById('splash');
+      s.classList.add('fade-out');
+      setTimeout(function() { s.style.display = 'none'; }, 550);
+    }
+
+    // ── Offline screen ─────────────────────────────────────────────────────────
+    function showOffline(msg) {
+      offlineShown = true;
+      var st = document.getElementById('offline-status');
+      if (st) st.textContent = msg || 'No internet connection.';
+      document.getElementById('offline-screen').style.display = 'flex';
+      hideSplash();
+    }
+    function hideOffline() {
+      offlineShown = false;
+      document.getElementById('offline-screen').style.display = 'none';
+    }
+
+    // ── Offline banner ─────────────────────────────────────────────────────────
+    function showBanner() {
+      var b = document.getElementById('offline-banner');
+      b.style.display = 'flex';
+      adjustBanner();
+    }
+    function hideBanner() {
+      document.getElementById('offline-banner').style.display = 'none';
+    }
+    function adjustBanner() {
+      var b = document.getElementById('offline-banner');
+      if (!b || b.style.display === 'none') return;
+      if (window.visualViewport) {
+        var kbHeight = window.innerHeight
+                     - window.visualViewport.height
+                     - window.visualViewport.offsetTop;
+        b.style.bottom = Math.max(0, Math.round(kbHeight)) + 'px';
+      } else {
+        b.style.bottom = '0px';
+      }
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', adjustBanner);
+      window.visualViewport.addEventListener('scroll', adjustBanner);
+    }
+
+    window.addEventListener('offline', function() { if (iframeReady) showBanner(); });
+    window.addEventListener('online',  function() {
+      hideBanner();
+      if (offlineShown) {
+        document.getElementById('offline-status').textContent = 'Connection detected — retrying…';
+        setTimeout(retryLoad, 800);
+      }
+    });
+
+    // ── Connectivity check ─────────────────────────────────────────────────────
+    function checkConnectivity(timeoutMs) {
+      return new Promise(function(resolve) {
+        var done  = false;
+        var timer = setTimeout(function() {
+          if (!done) { done = true; resolve(false); }
+        }, timeoutMs || 6000);
+        fetch('https://connectivitycheck.gstatic.com/generate_204', {
+          method: 'HEAD', mode: 'no-cors', cache: 'no-store'
+        })
+        .then(function()  { if (!done) { done = true; clearTimeout(timer); resolve(true);  } })
+        .catch(function() { if (!done) { done = true; clearTimeout(timer); resolve(false); } });
+      });
+    }
+
+    // ── Retry ──────────────────────────────────────────────────────────────────
+    window.retryLoad = function() {
+      var btn = document.getElementById('retry-btn');
+      var st  = document.getElementById('offline-status');
+      btn.disabled    = true;
+      btn.textContent = 'Checking…';
+      st.textContent  = 'Checking connection…';
+      checkConnectivity(6000).then(function(online) {
+        btn.disabled    = false;
+        btn.textContent = '↺ Retry';
+        if (online) {
+          hideOffline();
+          gone = false;
+          var splash = document.getElementById('splash');
+          splash.style.display   = 'flex';
+          splash.style.opacity   = '1';
+          splash.classList.remove('fade-out');
+          var frame = document.getElementById('app-frame');
+          frame.style.visibility = 'hidden';
+          frame.src = '';
+          setTimeout(function() {
+            frame.src = GAS_URL;
+            iframeReady = true;
+            frame.style.visibility = 'visible';
+          }, 150);
+        } else {
+          st.textContent = "Still can't reach server. Check your connection.";
+        }
+      });
+    };
+
+    // ── Startup ────────────────────────────────────────────────────────────────
+    checkConnectivity(6000).then(function(online) {
+      if (!online) {
+        showOffline('No internet connection.');
+      } else {
+        document.getElementById('app-frame').style.visibility = 'visible';
+        iframeReady = true;
+      }
+    });
+
+    document.getElementById('app-frame').addEventListener('load', function() {
+      if (!offlineShown && iframeReady) {
+        setTimeout(hideSplash, 700);
+      }
+    });
+
+  </script>
+
+</body>
+</html>
