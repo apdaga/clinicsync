@@ -2,7 +2,7 @@
   "name": "ClinicSync Demo",
   "short_name": "ClinicSync Demo",
   "description": "Manage patients, registrations, follow-ups, appointments, transactions with detailed analytics on fingertips — anywhere, anytime.",
-  "start_url": "./",
+  "start_url": "./?v=demo1",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#1a5276",
