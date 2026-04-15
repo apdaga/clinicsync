@@ -9,5 +9,5 @@ const CLINICSYNC_CONFIG = {
   SCRIPT_URL:  "https://script.google.com/macros/s/AKfycbwDxg3Owwxu4UTtGjqTKDa7OwYXqUB6KwQ_nWF_LYs31pmOq2g9BiYrHLEc-T_3_Kgx/exec",
   ENV:         "PROD",
   CLIENT_NAME: "ClinicSync Demo",
-  CACHE_NAME:  "csync-clinicsync-demo-prod-v2"
+  CACHE_NAME:  "csync-clinicsync-demo-prod-v3"
 };
