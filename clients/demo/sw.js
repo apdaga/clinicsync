@@ -22,6 +22,7 @@ const SHELL_FILES = [
   './',
   './index.html',
   './manifest.json',
+  './pwa-config.js',
   './icons/icon-192-demo.png',
   './icons/icon-512-demo.png'
 ];
