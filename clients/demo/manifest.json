@@ -1,6 +1,6 @@
 {
-  "name": "ClinicSync",
-  "short_name": "ClinicSync",
+  "name": "ClinicSync Demo",
+  "short_name": "ClinicSync Demo",
   "description": "Manage patients, registrations, follow-ups, appointments, transactions with detailed analytics on fingertips — anywhere, anytime.",
   "start_url": "./",
   "display": "standalone",
